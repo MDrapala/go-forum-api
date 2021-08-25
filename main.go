@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -35,11 +37,36 @@ func delete(w http.ResponseWriter, r *http.Request ) {
 	w.Write([]byte(`{"message": "delete called"}`))
 }
 
-//NOT FOUND
-func notFound(w http.ResponseWriter, r *http.Request) {
+//PARAMS
+func params(w http.ResponseWriter, r *http.Request) {
+	pathParams := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte(`{"message": "not found"}`))
+
+	userID := 5
+	var err error
+	if val, ok := pathParams["userID"]; ok {
+		userID, err = strconv.Atoi(val)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+	}
+
+	commentID := 5
+	if val, ok := pathParams["commentID"]; ok {
+		commentID, err = strconv.Atoi(val)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+	}
+
+	query := r.URL.Query()
+	location := query.Get("location")
+
+	w.Write([]byte(fmt.Sprintf(`{"userID": %d, "commentID": %d, "location": "%s"}`, userID, commentID, location)))
 }
 
 func main() {
@@ -50,7 +77,8 @@ func main() {
 	api.HandleFunc("/", post).Methods(http.MethodPost)
 	api.HandleFunc("/", put).Methods(http.MethodPut)
 	api.HandleFunc("/", delete).Methods(http.MethodDelete)
-	api.HandleFunc("/", notFound)
+
+	api.HandleFunc("/user/{userID}/comment/{commentID}", params).Methods(http.MethodGet)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
